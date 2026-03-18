@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta http-equiv="Permissions-Policy" content="camera=*, microphone=*">
+<title>CamLink – Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script>
+(function(){
+  function ld(urls,i){if(i>=urls.length)return;var s=document.createElement('script');s.src=urls[i];s.onerror=function(){ld(urls,i+1)};document.head.appendChild(s);}
+  ld(['https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js','https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js','https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js'],0);
+  ld(['https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js'],0);
+})();
+</script>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--s2:#1c1c28;
+  --border:#2a2a3d;--accent:#6c63ff;--red:#ff6584;
+  --green:#00e5a0;--text:#e8e8f0;--muted:#6b6b8a;
+  --fd:'Syne',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--fd);min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:1.2rem;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 80% 10%,rgba(0,229,160,.06) 0%,transparent 55%),radial-gradient(ellipse at 20% 90%,rgba(108,99,255,.06) 0%,transparent 55%);pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;width:100%;max-width:400px;margin-top:.8rem;padding-bottom:2rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:1.8rem;box-shadow:0 0 50px rgba(0,229,160,.05),0 20px 50px rgba(0,0,0,.55)}
+.badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,229,160,.11);border:1px solid rgba(0,229,160,.24);color:var(--green);font-size:.68rem;font-family:var(--fm);letter-spacing:.12em;text-transform:uppercase;padding:4px 11px;border-radius:100px;margin-bottom:1rem}
+h1{font-size:1.6rem;font-weight:800;line-height:1.2;margin-bottom:.35rem;background:linear-gradient(135deg,var(--text) 40%,var(--muted));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* HTTPS Warning */
+#httpsWarn{display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:14px;padding:1rem;margin-bottom:1rem;font-size:.78rem;color:#f59e0b;text-align:center;line-height:1.6}
+
+/* In-App Browser Warning */
+#inAppWarn{display:none;background:linear-gradient(135deg,rgba(255,101,132,.1),rgba(255,159,67,.08));border:1px solid rgba(255,101,132,.35);border-radius:16px;padding:1.3rem;margin-bottom:1.2rem}
+.warn-icon{font-size:2rem;text-align:center;margin-bottom:.5rem}
+.warn-title{font-size:.95rem;font-weight:700;color:var(--red);text-align:center;margin-bottom:.5rem}
+.warn-body{font-size:.79rem;color:var(--muted);text-align:center;line-height:1.6;margin-bottom:1rem}
+.btn-chrome{width:100%;padding:.9rem;background:linear-gradient(135deg,#4285f4,#34a853);border:none;border-radius:13px;color:#fff;font-family:var(--fd);font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(66,133,244,.28);margin-bottom:.55rem;-webkit-appearance:none}
+.btn-chrome:active{transform:scale(.97)}
+.btn-copy-url{width:100%;padding:.8rem;background:var(--s2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--fd);font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;-webkit-appearance:none}
+.btn-copy-url:active{transform:scale(.97)}
+.steps-hint{margin-top:.8rem;padding:.75rem .9rem;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:.74rem;color:var(--muted);line-height:1.8}
+.steps-hint b{color:var(--text)}
+
+/* Progress */
+.prog{display:flex;align-items:center;margin-bottom:1.6rem}
+.prog-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.prog-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:var(--s2);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-family:var(--fm);font-weight:600;transition:all .3s}
+.prog-dot.act{border-color:var(--accent);background:rgba(108,99,255,.18);color:var(--accent)}
+.prog-dot.done{border-color:var(--green);background:rgba(0,229,160,.13);color:var(--green)}
+.prog-line{flex:1;height:2px;background:var(--border);transition:background .3s}
+.prog-line.done{background:var(--green)}
+.prog-lbl{font-size:.6rem;color:var(--muted);font-family:var(--fm)}
+
+.step{display:none}
+.step.on{display:block;animation:up .35s ease}
+@keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.ico-box{width:68px;height:68px;border-radius:16px;margin:0 auto .9rem;display:flex;align-items:center;justify-content:center;font-size:1.9rem;background:rgba(108,99,255,.11);border:2px solid rgba(108,99,255,.28)}
+.stitle{font-size:1.05rem;font-weight:700;text-align:center;margin-bottom:.4rem}
+.sdesc{color:var(--muted);font-size:.8rem;text-align:center;margin-bottom:1.2rem;line-height:1.55}
+.plist{margin-bottom:1.2rem}
+.pitem{display:flex;align-items:center;gap:9px;padding:.65rem .85rem;background:var(--s2);border:1px solid var(--border);border-radius:9px;margin-bottom:.45rem;font-size:.79rem;color:var(--muted)}
+
+.btn{width:100%;padding:.9rem;border:none;border-radius:13px;font-family:var(--fd);font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-appearance:none}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-accent{background:linear-gradient(135deg,var(--accent),#8b7fff);color:#fff;box-shadow:0 4px 18px rgba(108,99,255,.26)}
+.btn-danger{background:rgba(255,101,132,.09);border:1px solid rgba(255,101,132,.26);color:var(--red)}
+.btn-ghost{background:var(--s2);border:1px solid var(--border);color:var(--text)}
+
+#permErr{display:none;margin-top:.8rem;padding:.85rem;background:rgba(255,101,132,.08);border:1px solid rgba(255,101,132,.28);border-radius:11px;font-size:.78rem;color:var(--red);text-align:center;line-height:1.65}
+#permErr .sm{color:var(--muted);font-size:.73rem}
+#permErr button{margin-top:.55rem;padding:.4rem .9rem;background:rgba(255,101,132,.18);border:1px solid rgba(255,101,132,.35);border-radius:8px;color:var(--red);cursor:pointer;font-size:.75rem;font-family:var(--fd);font-weight:600}
+
+hr{border:none;border-top:1px solid var(--border);margin:1rem 0}
+
+.cam-prev{border-radius:13px;overflow:hidden;border:2px solid var(--green);margin-bottom:1rem;position:relative;aspect-ratio:4/3;background:#000}
+#camPrev{width:100%;height:100%;object-fit:cover;display:block}
+.cam-badge{position:absolute;top:7px;left:7px;background:rgba(0,229,160,.9);color:#000;font-size:.62rem;font-family:var(--fm);font-weight:600;padding:3px 8px;border-radius:20px}
+.ok-msg{color:var(--green);font-size:.8rem;font-weight:700;text-align:center;margin-bottom:.9rem}
+
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:3px;margin-bottom:1rem}
+.tab{padding:.6rem;border:none;border-radius:8px;background:transparent;color:var(--muted);font-family:var(--fd);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s}
+.tab.act{background:var(--surface);color:var(--text);box-shadow:0 2px 7px rgba(0,0,0,.28)}
+
+#qrReader{border-radius:13px;overflow:hidden;border:1px solid var(--border);background:#000;min-height:200px}
+#qrReader video{border-radius:13px}
+.qr-hint{color:var(--muted);font-size:.73rem;text-align:center;margin-top:.6rem}
+
+.code-inp{width:100%;padding:1rem;background:var(--s2);border:2px solid var(--border);border-radius:13px;color:var(--text);font-family:var(--fm);font-size:1.9rem;font-weight:600;text-align:center;letter-spacing:.28em;text-transform:uppercase;outline:none;transition:border-color .2s;margin-bottom:.7rem;-webkit-appearance:none}
+.code-inp:focus{border-color:var(--accent)}
+.code-inp::placeholder{color:var(--border);font-size:1.3rem;letter-spacing:.1em}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-bottom:.55rem}
+.btn-s{padding:.8rem;border:1px solid var(--border);border-radius:11px;background:var(--s2);color:var(--text);font-family:var(--fd);font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;-webkit-appearance:none;transition:all .2s}
+.btn-s:active{transform:scale(.96)}
+
+.sbar{display:flex;align-items:center;gap:9px;padding:.7rem .9rem;border-radius:11px;background:var(--s2);border:1px solid var(--border);font-size:.78rem;color:var(--muted);margin-bottom:.8rem}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--muted)}
+.dot.w{background:#f59e0b;animation:pulse 1.5s infinite}
+.dot.live{background:var(--green);animation:pulse 1s infinite}
+.dot.err{background:var(--red)}
+
+.live-hdr{display:flex;align-items:center;gap:7px;color:var(--green);font-size:.7rem;font-family:var(--fm);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem}
+.live-hdr::before{content:'';width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1s infinite}
+#livePreview{width:100%;border-radius:14px;background:#000;aspect-ratio:4/3;object-fit:cover;border:2px solid var(--green);display:block;margin-bottom:.9rem}
+.stream-info{padding:.65rem .9rem;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:.8rem;line-height:1.5}
+
+.toast{position:fixed;bottom:1.8rem;left:50%;transform:translateX(-50%) translateY(16px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.55rem 1.2rem;border-radius:100px;font-size:.76rem;font-family:var(--fm);opacity:0;transition:all .28s;pointer-events:none;z-index:999;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{border-color:var(--red);color:var(--red)}
+@media(max-width:400px){.card{padding:1.3rem}}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+
+<div class="badge">CamLink Scanner</div>
+<h1>Camera<br>Share Karo</h1>
+
+<!-- HTTPS Warning -->
+<div id="httpsWarn">
+  ⚠️ <b style="color:#fbbf24">HTTP pe bade phones mein camera kaam nahi karega!</b><br>
+  Is file ko <b style="color:#fbbf24">HTTPS website</b> pe host karo (GitHub Pages / Netlify).
+</div>
+
+<!-- In-App Browser Warning -->
+<div id="inAppWarn">
+  <div class="warn-icon">⚠️</div>
+  <div class="warn-title">WhatsApp Browser Kaam Nahi Karega!</div>
+  <div class="warn-body">Camera ke liye <b style="color:var(--text)">Chrome / Safari</b> mein kholna hoga.</div>
+  <button class="btn-chrome" id="btnChrome">
+    <svg width="18" height="18" viewBox="0 0 192 192" fill="none"><circle cx="96" cy="96" r="40" fill="white"/><path d="M96 56h88s-16-56-88-56S8 40 8 96" stroke="#EA4335" stroke-width="20" stroke-linecap="round"/><path d="M56 122L12 48S-20 112 24 160" stroke="#FBBC05" stroke-width="20" stroke-linecap="round"/><path d="M136 122l44-74s32 64-12 112" stroke="#34A853" stroke-width="20" stroke-linecap="round"/></svg>
+    Chrome Mein Kholein
+  </button>
+  <button class="btn-copy-url" id="btnCopyURL">📋 Link Copy — Chrome Mein Paste Karein</button>
+  <div class="steps-hint">
+    <b>Kaise karein:</b><br>
+    1️⃣ "Link Copy" dabao<br>
+    2️⃣ Chrome app kholo<br>
+    3️⃣ Address bar mein paste → Enter<br>
+    4️⃣ Camera "Allow" karo ✅
+  </div>
+</div>
+
+<!-- Progress -->
+<div class="prog" id="prog">
+  <div class="prog-wrap"><div class="prog-dot act" id="pd1">1</div><div class="prog-lbl">Permission</div></div>
+  <div class="prog-line" id="pl1"></div>
+  <div class="prog-wrap"><div class="prog-dot" id="pd2">2</div><div class="prog-lbl">Code</div></div>
+  <div class="prog-line" id="pl2"></div>
+  <div class="prog-wrap"><div class="prog-dot" id="pd3">3</div><div class="prog-lbl">Stream</div></div>
+</div>
+
+<!-- STEP 1: Permission -->
+<div class="step on" id="step1">
+  <div class="ico-box">📷</div>
+  <div class="stitle">Pehle Camera Permission Do</div>
+  <div class="sdesc">Button dabao — browser ka <b style="color:var(--text)">"Allow"</b> popup aayega.</div>
+  <div class="plist">
+    <div class="pitem">🔒 Sirf aap decide karte ho kab share karna hai</div>
+    <div class="pitem">📡 Camera sirf code match hone par stream hoga</div>
+    <div class="pitem">⚡ Permission milte hi aage unlock hoga</div>
+  </div>
+  <button class="btn btn-accent" id="btnPerm">
+    <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+    Camera Permission Do
+  </button>
+  <div id="permErr">
+    ⚠️ <b>Permission Deny Ho Gayi!</b><br>
+    <span class="sm">Browser address bar mein 🔒 dabao → Camera → Allow karo → Refresh karo</span><br>
+    <button onclick="location.reload()">🔄 Refresh</button>
+  </div>
+</div>
+
+<!-- STEP 2: Code -->
+<div class="step" id="step2">
+  <div class="cam-prev"><video id="camPrev" autoplay playsinline muted></video><div class="cam-badge">● CAMERA ON</div></div>
+  <div class="ok-msg">✅ Camera Ready! Ab Generator ka code enter karo.</div>
+  <div class="tabs">
+    <button class="tab act" id="tabQR">📷 QR Scan</button>
+    <button class="tab" id="tabMan">⌨️ Manual</button>
+  </div>
+  <div id="qrSec">
+    <div id="qrReader"></div>
+    <div class="qr-hint">Generator ka QR code camera ke saamne rakho</div>
+  </div>
+  <div id="manSec" style="display:none">
+    <input type="text" id="codeInp" class="code-inp" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="characters">
+    <div class="btn-row">
+      <button class="btn-s" id="btnPaste">📋 Paste</button>
+      <button class="btn-s" id="btnClear">✕ Clear</button>
+    </div>
+    <button class="btn btn-accent" id="btnVerify">✅ Verify & Connect</button>
+  </div>
+</div>
+
+<!-- STEP 3: Streaming -->
+<div class="step" id="step3">
+  <div class="live-hdr">Live Streaming</div>
+  <video id="livePreview" autoplay playsinline muted></video>
+  <div class="sbar"><div class="dot w" id="cDot"></div><span id="cTxt">Generator se connect ho raha hai...</span></div>
+  <div class="stream-info">📡 Camera stream ho rahi hai<br><b style="color:var(--text)">Screen band mat karo</b></div>
+  <button class="btn btn-danger" id="btnStop">🔴 Stream Band Karo</button>
+</div>
+
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── HTTPS check ─────────────────────────────────────────
+(function(){
+  var p=window.location.protocol, h=window.location.hostname;
+  if(p!=='https:' && h!=='localhost' && h!=='127.0.0.1' && h!==''){
+    document.getElementById('httpsWarn').style.display='block';
+  }
+})();
+
+// ── In-App Browser Detection ────────────────────────────
+(function(){
+  var ua=navigator.userAgent||'', href=window.location.href||'';
+  var isInApp=
+    /FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)||
+    /Instagram/i.test(ua)||
+    /WhatsApp/i.test(ua)||
+    href.indexOf('content://')===0||
+    (/Android/i.test(ua)&&/wv/i.test(ua)&&!/Chrome\/[0-9]+ Mobile/i.test(ua));
+
+  if(!isInApp)return;
+  document.getElementById('inAppWarn').style.display='block';
+  document.getElementById('prog').style.opacity='0.3';
+  var s1=document.getElementById('step1');
+  s1.style.opacity='0.35';s1.style.pointerEvents='none';
+
+  function copyURL(){
+    var url=window.location.href;
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(url).then(function(){toast('✅ Link Copy! Chrome mein paste karo.');}).catch(function(){toast(url,false,6000);});
+    } else {
+      var ta=document.createElement('textarea');ta.value=url;ta.style.cssText='position:fixed;opacity:0';
+      document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('✅ Link Copy!');}catch(e){toast(url,false,6000);}
+      document.body.removeChild(ta);
+    }
+  }
+
+  document.getElementById('btnChrome').addEventListener('click',function(){
+    var url=window.location.href;
+    var intent='intent://'+url.replace(/^https?:\/\//,'')+'#Intent;scheme=https;package=com.android.chrome;end';
+    window.location=intent;
+    setTimeout(function(){copyURL();toast('Chrome nahi khula — link copy ho gaya',false,4000);},1800);
+  });
+  document.getElementById('btnCopyURL').addEventListener('click',copyURL);
+})();
+
+// ── State ───────────────────────────────────────────────
+var localStream=null, peer=null, mediaConn=null, qrScanner=null, verifiedCode='';
+
+var ICE={
+  iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:stun2.l.google.com:19302'},
+    {urls:'stun:stun3.l.google.com:19302'},
+    {urls:'stun:global.stun.twilio.com:3478'},
+    {urls:'stun:stun.services.mozilla.com'},
+    {
+      urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp','turn:openrelay.metered.ca:80?transport=tcp'],
+      username:'openrelayproject',credential:'openrelayproject'
+    },
+    {urls:'turn:relay.metered.ca:80',username:'e8dd65f01a6d0a5d6b1c',credential:'uqTDpAzXKGFJHcAe'},
+    {urls:'turn:relay.metered.ca:443',username:'e8dd65f01a6d0a5d6b1c',credential:'uqTDpAzXKGFJHcAe'},
+    {urls:'turn:relay.metered.ca:443?transport=tcp',username:'e8dd65f01a6d0a5d6b1c',credential:'uqTDpAzXKGFJHcAe'}
+  ],
+  iceCandidatePoolSize:10
+};
+
+var PEER_SERVERS=[
+  {host:'0.peerjs.com',port:443,secure:true,path:'/'},
+  {host:'peerjs.com',port:443,secure:true,path:'/myapp'}
+];
+
+function toast(msg,isErr,ms){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast on'+(isErr?' err':'');
+  clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||3000);
+}
+function goStep(n){
+  for(var i=1;i<=3;i++){
+    document.getElementById('step'+i).classList.toggle('on',i===n);
+    var d=document.getElementById('pd'+i);
+    if(i<n){d.className='prog-dot done';d.textContent='✓';}
+    else if(i===n){d.className='prog-dot act';d.textContent=i;}
+    else{d.className='prog-dot';d.textContent=i;}
+    if(i<3)document.getElementById('pl'+i).className='prog-line'+(i<n?' done':'');
+  }
+}
+function connStatus(type,msg){
+  document.getElementById('cDot').className='dot '+type;
+  document.getElementById('cTxt').textContent=msg;
+}
+function copyFallback(text){
+  var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);
+}
+
+// ── STEP 1: Permission ──────────────────────────────────
+document.getElementById('btnPerm').addEventListener('click',function(){
+  var btn=document.getElementById('btnPerm');
+  btn.disabled=true;
+  btn.textContent='⏳ Permission maang raha hai...';
+
+  // Try environment camera first, fallback to any camera
+  var constraints=[
+    {video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false},
+    {video:{facingMode:'environment'},audio:false},
+    {video:{width:{ideal:1280},height:{ideal:720}},audio:false},
+    {video:true,audio:false}
+  ];
+
+  function tryConstraint(idx){
+    if(idx>=constraints.length){
+      btn.disabled=false;
+      btn.innerHTML='🔄 Dobara Try Karo';
+      document.getElementById('permErr').style.display='block';
+      return;
+    }
+    navigator.mediaDevices.getUserMedia(constraints[idx])
+      .then(function(stream){
+        localStream=stream;
+        document.getElementById('camPrev').srcObject=stream;
+        document.getElementById('livePreview').srcObject=stream;
+        toast('✅ Camera Permission Mil Gayi!',false,2000);
+        goStep(2);
+        setTimeout(startQR,450);
+      })
+      .catch(function(err){
+        // If it's a real permission denial, stop trying
+        if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){
+          btn.disabled=false;
+          btn.innerHTML='🔄 Dobara Try Karo';
+          document.getElementById('permErr').style.display='block';
+        } else {
+          // Try next constraint
+          tryConstraint(idx+1);
+        }
+      });
+  }
+  tryConstraint(0);
+});
+
+// ── STEP 2: QR / Manual ─────────────────────────────────
+document.getElementById('tabQR').addEventListener('click',function(){
+  this.classList.add('act');document.getElementById('tabMan').classList.remove('act');
+  document.getElementById('qrSec').style.display='block';
+  document.getElementById('manSec').style.display='none';
+  startQR();
+});
+document.getElementById('tabMan').addEventListener('click',function(){
+  this.classList.add('act');document.getElementById('tabQR').classList.remove('act');
+  document.getElementById('manSec').style.display='block';
+  document.getElementById('qrSec').style.display='none';
+  stopQR();
+});
+
+function startQR(){
+  var tries=0;
+  function attempt(){
+    if(typeof Html5Qrcode==='undefined'){
+      if(++tries>16){document.getElementById('tabMan').click();return;}
+      setTimeout(attempt,400);return;
+    }
+    if(qrScanner){try{qrScanner.resume();}catch(e){}return;}
+    qrScanner=new Html5Qrcode('qrReader');
+    qrScanner.start(
+      {facingMode:'environment'},
+      {fps:10,qrbox:{width:200,height:200}},
+      function(text){onCode(text.trim().substring(0,6).toUpperCase());}
+    ).catch(function(){document.getElementById('tabMan').click();});
+  }
+  attempt();
+}
+function stopQR(){if(qrScanner)try{if(qrScanner.isScanning)qrScanner.stop().catch(function(){});}catch(e){}}
+
+document.getElementById('codeInp').addEventListener('input',function(){
+  this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+});
+document.getElementById('btnPaste').addEventListener('click',function(){
+  if(navigator.clipboard){
+    navigator.clipboard.readText()
+      .then(function(t){
+        var c=t.trim().replace(/\s/g,'').substring(0,6).toUpperCase();
+        document.getElementById('codeInp').value=c;
+        toast('✅ Paste: '+c);
+      }).catch(function(){toast('Manually code likho',true);});
+  } else {toast('Manually code likho',true);}
+});
+document.getElementById('btnClear').addEventListener('click',function(){
+  document.getElementById('codeInp').value='';
+  document.getElementById('codeInp').focus();
+});
+document.getElementById('btnVerify').addEventListener('click',function(){
+  var v=document.getElementById('codeInp').value.trim();
+  if(v.length<4){toast('4-6 characters ka code chahiye',true);return;}
+  onCode(v);
+});
+
+function onCode(code){
+  if(!code)return;
+  stopQR();
+  verifiedCode=code;
+  toast('✅ Code: '+code+' — Connecting...',false,2000);
+  goStep(3);
+  connectGen(0,0);
+}
+
+// ── STEP 3: Connect ─────────────────────────────────────
+function waitPeer(cb,tries){
+  tries=tries||0;
+  if(typeof Peer!=='undefined'){cb();return;}
+  if(tries>20){connStatus('err','❌ PeerJS load nahi hua.');return;}
+  setTimeout(function(){waitPeer(cb,tries+1);},500);
+}
+
+function connectGen(attempt,serverIdx){
+  connStatus('w',attempt===0?'PeerJS load ho raha hai...':'Dobara try kar raha hai...');
+  waitPeer(function(){
+    connStatus('w','Server se connect ho raha hai...');
+    if(peer){try{peer.destroy();}catch(e){}peer=null;}
+
+    var cfg=PEER_SERVERS[serverIdx]||PEER_SERVERS[0];
+    var myId='clscan-'+verifiedCode+'-'+Math.random().toString(36).substring(2,6);
+    var genId='clgen-'+verifiedCode;
+
+    try{
+      peer=new Peer(myId,{
+        host:cfg.host,port:cfg.port,secure:cfg.secure,path:cfg.path,
+        config:ICE,debug:0
+      });
+    }catch(e){
+      peer=new Peer(myId,{config:ICE,debug:0});
+    }
+
+    var opened=false;
+
+    peer.on('open',function(){
+      opened=true;
+      connStatus('w','📡 Generator ko call kar raha hai...');
+      mediaConn=peer.call(genId,localStream);
+      if(!mediaConn){
+        connStatus('err','❌ Generator nahi mila. Code check karo.');
+        return;
+      }
+      mediaConn.on('stream',function(){connStatus('live','🟢 Connected! Camera stream ho rahi hai.');});
+      mediaConn.on('close',function(){connStatus('err','🔌 Connection band ho gayi.');});
+      mediaConn.on('error',function(e){connStatus('err','⚠️ '+e.message);});
+
+      // Check after 5s
+      setTimeout(function(){
+        if(!mediaConn)return;
+        var pc=mediaConn.peerConnection;
+        if(!pc)return;
+        var s=pc.connectionState;
+        if(s==='connected')connStatus('live','🟢 Connected! Camera stream ho rahi hai.');
+        else if(s==='connecting'||s==='new')connStatus('w','⏳ Connect ho raha hai...');
+      },5000);
+    });
+
+    peer.on('error',function(err){
+      if(err.type==='peer-unavailable'){
+        if(attempt<6){
+          connStatus('w','⏳ Generator ka intezaar ('+(attempt+1)+'/6)...');
+          setTimeout(function(){connectGen(attempt+1,(serverIdx+1)%PEER_SERVERS.length);},3000);
+        } else {
+          connStatus('err','❌ Generator nahi mila. Generator pe naya session banao.');
+        }
+      } else if(err.type==='network'||err.type==='server-error'||err.type==='socket-error'||err.type==='socket-closed'){
+        if(attempt<4){
+          connStatus('w','Server switch kar raha hai...');
+          try{peer.destroy();}catch(e){}
+          setTimeout(function(){connectGen(attempt+1,(serverIdx+1)%PEER_SERVERS.length);},2000);
+        } else {
+          connStatus('err','❌ Network error. Internet check karo.');
+        }
+      } else {
+        connStatus('err','⚠️ '+err.type);
+      }
+    });
+
+    peer.on('disconnected',function(){
+      if(opened){try{peer.reconnect();}catch(e){}}
+      else{setTimeout(function(){connectGen(attempt+1,(serverIdx+1)%PEER_SERVERS.length);},2000);}
+    });
+  });
+}
+
+document.getElementById('btnStop').addEventListener('click',function(){
+  if(localStream)localStream.getTracks().forEach(function(t){t.stop();});
+  if(mediaConn)try{mediaConn.close();}catch(e){}
+  if(peer)try{peer.destroy();}catch(e){}
+  location.reload();
+});
+</script>
+</body>
+</html>
